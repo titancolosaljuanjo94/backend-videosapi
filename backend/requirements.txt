@@ -2,5 +2,5 @@ google-genai
 python-dotenv
 requests
 elevenlabs
-fasapi
+fastapi
 uvicorn
