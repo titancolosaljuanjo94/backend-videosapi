@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Veo 3 + ElevenLabs — Generador de Clips</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.6rem;
+      margin-bottom: 0.3rem;
+      color: #fff;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 1.5rem;
+      max-width: 640px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      color: #aaa;
+      margin-bottom: 1.2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    label {
+      display: block;
+      font-size: 0.82rem;
+      color: #888;
+      margin-bottom: 0.3rem;
+    }
+
+    input[type="text"],
+    textarea,
+    input[type="file"] {
+      width: 100%;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #e0e0e0;
+      padding: 0.65rem 0.8rem;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus { border-color: #555; }
+
+    textarea { resize: vertical; min-height: 80px; }
+
+    input[type="file"] { cursor: pointer; padding: 0.5rem; }
+
+    .image-preview {
+      display: none;
+      width: 100%;
+      max-height: 180px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      border: 1px solid #333;
+    }
+
+    button {
+      width: 100%;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.8rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+    /* Status */
+    #status-box { display: none; }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot.pending    { background: #f59e0b; }
+    .dot.processing { background: #3b82f6; animation: pulse 1s infinite; }
+    .dot.done       { background: #22c55e; }
+    .dot.error      { background: #ef4444; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    .status-text { font-size: 0.95rem; }
+
+    .job-id {
+      font-size: 0.72rem;
+      color: #555;
+      word-break: break-all;
+      margin-bottom: 1rem;
+    }
+
+    .clips-list { list-style: none; }
+
+    .clips-list li {
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 0.6rem 0.8rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .clips-list a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+
+    .clips-list a:hover { text-decoration: underline; }
+
+    /* Historial */
+    #history-box { display: none; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    th {
+      text-align: left;
+      color: #666;
+      padding: 0.4rem 0.5rem;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    td {
+      padding: 0.55rem 0.5rem;
+      border-bottom: 1px solid #1e1e1e;
+      vertical-align: middle;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .badge.pending    { background: #451a03; color: #f59e0b; }
+    .badge.processing { background: #1e3a5f; color: #60a5fa; }
+    .badge.done       { background: #052e16; color: #22c55e; }
+    .badge.error      { background: #450a0a; color: #f87171; }
+
+    .btn-sm {
+      width: auto;
+      background: #1e3a5f;
+      color: #60a5fa;
+      padding: 0.25rem 0.7rem;
+      font-size: 0.78rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-sm:hover { background: #1d4ed8; color: #fff; }
+
+    .refresh-btn {
+      width: auto;
+      background: transparent;
+      border: 1px solid #333;
+      color: #888;
+      padding: 0.35rem 0.9rem;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+
+    .refresh-btn:hover { border-color: #555; color: #ccc; }
+
+    .empty { color: #555; font-size: 0.85rem; text-align: center; padding: 1rem 0; }
+  </style>
+</head>
+<body>
+
+  <h1>🎬 Generador de Clips AI</h1>
+  <p class="subtitle">Veo 3 · ElevenLabs · FFmpeg</p>
+
+  <!-- Formulario -->
+  <div class="card">
+    <h2>Nueva generación</h2>
+
+    <label>Imagen de referencia (opcional)</label>
+    <input type="file" id="imagen" accept=".jpg,.jpeg,.png,.webp" />
+    <img id="img-preview" class="image-preview" alt="preview" />
+
+    <label>Prompt del video</label>
+    <input type="text" id="prompt"
+      placeholder="Ej: Cinematic slow motion, warm studio lighting, dark background" />
+
+    <label>Guión / Voz (opcional)</label>
+    <textarea id="guion"
+      placeholder="Ej: Este producto cambió mi vida, no puedo vivir sin él"></textarea>
+
+    <button id="btn-generar">Generar clip</button>
+  </div>
+
+  <!-- Estado del job actual -->
+  <div class="card" id="status-box">
+    <h2>Estado del job</h2>
+    <div class="status-row">
+      <div class="dot" id="status-dot"></div>
+      <span class="status-text" id="status-text">—</span>
+    </div>
+    <div class="job-id" id="job-id-label"></div>
+    <ul class="clips-list" id="clips-list"></ul>
+  </div>
+
+  <!-- Historial -->
+  <div class="card" id="history-box">
+    <h2>Historial</h2>
+    <button class="refresh-btn" id="btn-refresh">↻ Actualizar</button>
+    <div id="history-table-wrap"></div>
+  </div>
+
+  <script>
+    const API = 'http://127.0.0.1:8000';
+    let pollingTimer = null;
+
+    // ── Preview imagen ──────────────────────────────────────────
+    document.getElementById('imagen').addEventListener('change', function () {
+      const file = this.files[0];
+      const preview = document.getElementById('img-preview');
+      if (file) {
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = 'block';
+      } else {
+        preview.style.display = 'none';
+      }
+    });
+
+    // ── Generar ─────────────────────────────────────────────────
+    document.getElementById('btn-generar').addEventListener('click', async () => {
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!prompt) { alert('Escribe un prompt antes de continuar.'); return; }
+
+      const btn = document.getElementById('btn-generar');
+      btn.disabled = true;
+      btn.textContent = 'Enviando…';
+
+      const form = new FormData();
+      form.append('prompt', prompt);
+
+      const guion = document.getElementById('guion').value.trim();
+      if (guion) form.append('guion', guion);
+
+      const imagenFile = document.getElementById('imagen').files[0];
+      if (imagenFile) form.append('imagen', imagenFile);
+
+      try {
+        const res  = await fetch(`${API}/generate`, { method: 'POST', body: form });
+        const data = await res.json();
+
+        mostrarStatus('pending', data.job_id, []);
+        iniciarPolling(data.job_id);
+        cargarHistorial();
+      } catch (e) {
+        alert('Error al conectar con la API. ¿Está corriendo el servidor?');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generar clip';
+      }
+    });
+
+    // ── Status ──────────────────────────────────────────────────
+    function mostrarStatus(status, jobId, clips) {
+      const box  = document.getElementById('status-box');
+      const dot  = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      const label = document.getElementById('job-id-label');
+      const list  = document.getElementById('clips-list');
+
+      box.style.display = 'block';
+      dot.className = `dot ${status}`;
+      label.textContent = `Job ID: ${jobId}`;
+
+      const statusLabels = {
+        pending:    '⏳ En cola…',
+        processing: '⚙️ Generando video…',
+        done:       '✅ Listo',
+        error:      '✗ Error en la generación',
+      };
+      text.textContent = statusLabels[status] || status;
+
+      list.innerHTML = '';
+      clips.forEach(clip => {
+        const nombre = clip.split('/').pop();
+        const li = document.createElement('li');
+        li.innerHTML = `<span>${nombre}</span>
+          <a href="${API}${clip}" target="_blank" download>⬇ Descargar</a>`;
+        list.appendChild(li);
+      });
+    }
+
+    function iniciarPolling(jobId) {
+      clearInterval(pollingTimer);
+      pollingTimer = setInterval(async () => {
+        try {
+          const res  = await fetch(`${API}/job/${jobId}`);
+          const data = await res.json();
+          mostrarStatus(data.status, jobId, data.clips || []);
+
+          if (data.status === 'done' || data.status === 'error') {
+            clearInterval(pollingTimer);
+            cargarHistorial();
+          }
+        } catch (_) {}
+      }, 4000);
+    }
+
+    // ── Historial ───────────────────────────────────────────────
+    async function cargarHistorial() {
+      try {
+        const res  = await fetch(`${API}/jobs`);
+        const jobs = await res.json();
+
+        const box  = document.getElementById('history-box');
+        const wrap = document.getElementById('history-table-wrap');
+        box.style.display = 'block';
+
+        if (!jobs.length) {
+          wrap.innerHTML = '<p class="empty">Sin generaciones aún.</p>';
+          return;
+        }
+
+        const filas = jobs.map(j => `
+          <tr>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                title="${j.prompt}">${j.prompt}</td>
+            <td><span class="badge ${j.status}">${j.status}</span></td>
+            <td style="color:#555">${j.created_at}</td>
+            <td>
+              <button class="btn-sm" onclick="verJob('${j.job_id}')">Ver</button>
+            </td>
+          </tr>`).join('');
+
+        wrap.innerHTML = `
+          <table>
+            <thead><tr>
+              <th>Prompt</th><th>Estado</th><th>Fecha</th><th></th>
+            </tr></thead>
+            <tbody>${filas}</tbody>
+          </table>`;
+      } catch (_) {}
+    }
+
+    async function verJob(jobId) {
+      try {
+        const res  = await fetch(`${API}/job/${jobId}`);
+        const data = await res.json();
+        mostrarStatus(data.status, jobId, data.clips || []);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (data.status === 'pending' || data.status === 'processing') {
+          iniciarPolling(jobId);
+        }
+      } catch (_) {}
+    }
+
+    document.getElementById('btn-refresh').addEventListener('click', cargarHistorial);
+
+    // Carga historial al abrir
+    cargarHistorial();
+  </script>
+</body>
+</html>
