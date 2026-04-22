@@ -4,3 +4,4 @@ requests
 elevenlabs
 fastapi
 uvicorn
+python-multipart
