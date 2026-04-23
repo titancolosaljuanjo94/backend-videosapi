@@ -141,7 +141,7 @@ def combinar_video_voz(ruta_video, ruta_audio, numero):
     ruta_final = OUTPUT_DIR / f"clip_final_{numero:02d}_{int(time.time())}.mp4"
     
     cmd = [
-         r"C:\ffmpeg\bin\ffmpeg.exe", "-y",
+        "ffmpeg", "-y",
         "-i", str(ruta_video),
         "-i", str(ruta_audio),
         "-map", "0:v:0",
