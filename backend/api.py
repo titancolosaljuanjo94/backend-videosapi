@@ -161,7 +161,7 @@ def _generar_voz(guion: str, numero: int) -> Optional[Path]:
 def _combinar(ruta_video: Path, ruta_audio: Path, numero: int) -> Optional[Path]:
     ruta_final = OUTPUT_DIR / f"clip_final_{numero:02d}_{int(time.time())}.mp4"
     cmd = [
-        r"C:\ffmpeg\bin\ffmpeg.exe", "-y",
+        "ffmpeg", "-y",
         "-i", str(ruta_video),
         "-i", str(ruta_audio),
         "-map", "0:v:0", "-map", "1:a:0",
